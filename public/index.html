@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA — Personal Secretary</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0e0e0e;
+    --paper: #f5f0e8;
+    --cream: #ede8dc;
+    --warm: #c8956c;
+    --warm-light: #e8c4a0;
+    --muted: #8a8070;
+    --divider: #d4cfc4;
+    --success: #5a8a6a;
+    --danger: #a05a5a;
+    --shadow: rgba(14,14,14,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, var(--divider) 27px, var(--divider) 28px);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    letter-spacing: 0.15em;
+  }
+
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-style: italic;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .logo span { color: var(--warm-light); }
+
+  .status-bar {
+    display: flex; gap: 1.5rem; align-items: center;
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.2em;
+    color: rgba(245,240,232,0.5);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #555; display: inline-block;
+    transition: background 0.3s;
+  }
+  .status-dot.active { background: #5a8a6a; box-shadow: 0 0 6px #5a8a6a; }
+
+  /* ── LAYOUT ── */
+  .app {
+    position: relative; z-index: 1;
+    max-width: 1100px; margin: 0 auto;
+    padding: 2rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 2rem;
+    flex: 1;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: rgba(245,240,232,0.9);
+    border: 1px solid var(--divider);
+    padding: 1.5rem;
+    position: relative;
+    backdrop-filter: blur(2px);
+    margin-bottom: 1.5rem;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--warm);
+  }
+
+  .card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--divider);
+  }
+
+  /* ── VOICE ── */
+  .voice-section {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: var(--ink);
+    color: var(--paper);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .voice-section::after {
+    content: 'ARIA';
+    position: absolute;
+    right: -20px; top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 8rem;
+    font-style: italic;
+    font-weight: 300;
+    color: rgba(200,149,108,0.08);
+    letter-spacing: -0.02em;
+    pointer-events: none;
+  }
+
+  .mic-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    border: 2px solid var(--warm);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .mic-btn:hover { background: rgba(200,149,108,0.1); }
+
+  .mic-btn.listening {
+    border-color: var(--warm-light);
+    background: rgba(200,149,108,0.2);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(200,149,108,0.4); }
+    50% { box-shadow: 0 0 0 16px rgba(200,149,108,0); }
+  }
+
+  .mic-icon {
+    width: 28px; height: 28px; fill: var(--warm);
+  }
+
+  .voice-hint {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245,240,232,0.4);
+    margin-bottom: 1rem;
+  }
+
+  .transcript-box {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--warm-light);
+    min-height: 2rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .transcript-box.visible { opacity: 1; }
+
+  /* ── TASKS ── */
+  .task-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .task-item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--divider);
+    background: rgba(245,240,232,0.5);
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .task-item:hover { border-color: var(--warm); background: rgba(200,149,108,0.05); }
+  .task-item.completed { opacity: 0.45; }
+  .task-item.completed .task-title { text-decoration: line-through; }
+
+  .task-check {
+    width: 16px; height: 16px; border: 1.5px solid var(--muted);
+    border-radius: 2px; flex-shrink: 0; margin-top: 2px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+  }
+
+  .task-check.checked { border-color: var(--success); background: var(--success); }
+
+  .task-check.checked::after {
+    content: '✓';
+    color: white;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .task-info { flex: 1; min-width: 0; }
+  .task-title { font-size: 0.8rem; letter-spacing: 0.05em; }
+  .task-meta { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+
+  .priority-badge {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 1px 6px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .priority-high { background: rgba(160,90,90,0.15); color: var(--danger); border: 1px solid rgba(160,90,90,0.3); }
+  .priority-medium { background: rgba(200,149,108,0.15); color: var(--warm); border: 1px solid rgba(200,149,108,0.3); }
+  .priority-low { background: rgba(90,138,106,0.15); color: var(--success); border: 1px solid rgba(90,138,106,0.3); }
+
+  .task-edit {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 0.75rem; padding: 0 2px;
+    opacity: 0; transition: opacity 0.15s; flex-shrink: 0;
+  }
+  .task-item:hover .task-edit { opacity: 1; }
+
+  .task-delete {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 0.9rem; padding: 0 2px;
+    opacity: 0; transition: opacity 0.2s;
+  }
+
+  .task-item:hover .task-delete { opacity: 1; }
+
+  /* ── ADD TASK FORM ── */
+  .add-task-form {
+    display: flex; flex-direction: column; gap: 0.75rem;
+    padding: 1rem;
+    border: 1px dashed var(--divider);
+    background: rgba(245,240,232,0.4);
+    margin-top: 1rem;
+  }
+
+  .form-row { display: flex; gap: 0.5rem; }
+
+  input, select, textarea {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    color: var(--ink);
+    padding: 0.5rem 0.75rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+    letter-spacing: 0.03em;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--warm); }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a8070'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+    cursor: pointer;
+  }
+
+  label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    padding: 0.6rem 1.25rem;
+    border: 1.5px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #333; border-color: #333; }
+  .btn-warm { border-color: var(--warm); color: var(--warm); }
+  .btn-warm:hover { background: var(--warm); color: var(--paper); }
+  .btn-full { width: 100%; justify-content: center; display: block; text-align: center; }
+  .btn-sm { padding: 0.4rem 0.85rem; font-size: 0.65rem; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {}
+
+  /* ── CALENDAR ── */
+  .calendar-event {
+    display: flex; gap: 0.75rem; align-items: flex-start;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .calendar-event:last-child { border-bottom: none; }
+
+  .event-time {
+    font-size: 0.65rem;
+    color: var(--warm);
+    white-space: nowrap;
+    min-width: 64px;
+    padding-top: 1px;
+  }
+
+  .event-title { font-size: 0.75rem; }
+
+  /* ── SEND SECTION ── */
+  .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  /* ── DEBRIEF ── */
+  .debrief-area textarea { height: 80px; resize: vertical; }
+
+  /* ── SETTINGS PANEL ── */
+  .settings-overlay {
+    position: fixed; inset: 0; background: rgba(14,14,14,0.75);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+
+  .settings-overlay.open { opacity: 1; pointer-events: all; }
+
+  .settings-panel {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    padding: 2rem;
+    width: 480px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.3s;
+  }
+
+  .settings-overlay.open .settings-panel { transform: translateY(0); }
+
+  .settings-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .settings-section { margin-bottom: 1.5rem; }
+  .settings-section-title {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.2em;
+    color: var(--warm); margin-bottom: 0.75rem;
+  }
+
+  .field { margin-bottom: 0.75rem; }
+
+  .close-btn {
+    position: absolute; top: 1rem; right: 1rem;
+    background: none; border: none; cursor: pointer;
+    font-size: 1.2rem; color: var(--muted);
+  }
+
+  .close-btn:hover { color: var(--ink); }
+
+  /* ── FEEDBACK ── */
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--ink); color: var(--paper);
+    padding: 0.75rem 1.25rem;
+    font-size: 0.75rem; letter-spacing: 0.1em;
+    z-index: 300;
+    transform: translateY(100px);
+    transition: transform 0.3s;
+    border-left: 3px solid var(--warm);
+  }
+
+  .toast.show { transform: translateY(0); }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--divider); margin-bottom: 1rem; }
+
+  .tab {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.2em;
+    padding: 0.6rem 1rem; cursor: pointer; border: none; background: none;
+    color: var(--muted); font-family: 'DM Mono', monospace;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+
+  .tab.active { color: var(--ink); border-bottom-color: var(--warm); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── EMPTY ── */
+  .empty-state {
+    text-align: center; padding: 2rem 1rem;
+    color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em;
+    font-style: italic;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+  }
+
+  /* ── SETUP NOTICE ── */
+  .setup-notice {
+    background: rgba(200,149,108,0.1);
+    border: 1px solid rgba(200,149,108,0.3);
+    padding: 0.75rem 1rem;
+    font-size: 0.7rem;
+    color: var(--warm);
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .setup-notice.visible { display: block; }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { order: -1; }
+    .tasks-page { grid-template-columns: 1fr; }
+  }
+
+  /* ── PAGE NAV ── */
+  .page-nav { display: flex; }
+  .nav-tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.2em;
+    padding: 0 1.25rem; height: 56px;
+    border: none; background: none;
+    color: rgba(245,240,232,0.45);
+    cursor: pointer; transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+  .nav-tab:hover { color: var(--warm-light); }
+  .nav-tab.active { color: var(--warm-light); border-bottom-color: var(--warm); }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── TASKS PAGE ── */
+  .tasks-page {
+    max-width: 1100px; margin: 0 auto;
+    padding: 2rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* ── HABIT CHECK ── */
+  .habit-check {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--warm);
+    border-radius: 50%;
+    flex-shrink: 0; margin-top: 2px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .habit-check.done-today { border-color: var(--success); background: var(--success); }
+  .habit-check.done-today::after { content: '✓'; color: white; font-size: 10px; line-height: 1; }
+  .task-item.done-today { opacity: 0.55; }
+
+  /* ── DEADLINE BADGE ── */
+  .deadline-badge {
+    font-size: 0.6rem; text-transform: uppercase;
+    letter-spacing: 0.1em; padding: 1px 6px;
+    border-radius: 2px; flex-shrink: 0; white-space: nowrap;
+  }
+  .deadline-ok { background: rgba(90,138,106,0.15); color: var(--success); border: 1px solid rgba(90,138,106,0.3); }
+  .deadline-soon { background: rgba(200,149,108,0.15); color: var(--warm); border: 1px solid rgba(200,149,108,0.3); }
+  .deadline-overdue { background: rgba(160,90,90,0.15); color: var(--danger); border: 1px solid rgba(160,90,90,0.3); }
+
+  /* ── DASHBOARD SUMMARY ── */
+  .summary-stats { display: flex; gap: 2rem; padding: 0.5rem 0 1rem; }
+  .summary-stat { text-align: center; }
+  .summary-stat-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem; font-weight: 300; line-height: 1;
+  }
+  .summary-stat-label {
+    font-size: 0.6rem; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--muted); margin-top: 2px;
+  }
+
+  /* Loading state */
+  .loading { opacity: 0.5; pointer-events: none; }
+
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 1.5px solid var(--divider);
+    border-top-color: var(--warm);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>A</span>ria</div>
+  <nav class="page-nav">
+    <button class="nav-tab active" id="nav-dashboard" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-tab" id="nav-tasks" onclick="showPage('tasks')">Tasks</button>
+    <button class="nav-tab" id="nav-stats" onclick="showPage('stats')">Stats</button>
+  </nav>
+  <div class="status-bar">
+    <span><span class="status-dot" id="dot-twilio"></span> WhatsApp</span>
+    <span><span class="status-dot" id="dot-calendar"></span> Calendar</span>
+    <span><span class="status-dot" id="dot-ai"></span> AI</span>
+    <button class="btn btn-sm" style="color:var(--warm-light);border-color:rgba(200,149,108,0.4)" onclick="openSettings()">⚙ Setup</button>
+  </div>
+</header>
+
+<div id="page-dashboard" class="page active">
+<div class="app">
+  <!-- MAIN COLUMN -->
+  <div class="main">
+
+    <!-- Voice Input -->
+    <div class="voice-section">
+      <button class="mic-btn" id="micBtn" onclick="toggleVoice()">
+        <svg class="mic-icon" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="voice-hint" id="voiceHint">Tap to speak to Aria</div>
+      <div class="transcript-box" id="transcriptBox"></div>
+    </div>
+
+    <!-- Setup Notice -->
+    <div class="setup-notice" id="setupNotice">
+      ⚠ Please configure your API keys in Setup to activate Aria's features.
+    </div>
+
+    <!-- Today at a glance -->
+    <div class="card" id="dashSummaryCard">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+        <div class="card-title" style="margin-bottom:0">Today at a Glance</div>
+        <button class="btn btn-sm" onclick="showPage('tasks')">Manage Tasks →</button>
+      </div>
+      <div class="summary-stats" id="dashSummary"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:0.5rem">
+        <div>
+          <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:6px">Habits</div>
+          <div id="dashHabitsList"></div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:6px">Pending Tasks</div>
+          <div id="dashTasksList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- hidden add-task form kept for voice commands -->
+    <div style="display:none">
+      <div class="add-task-form" id="addTaskForm" style="display:none">
+        <div class="field">
+          <label>Task title</label>
+          <input type="text" id="taskTitle" placeholder="What needs to be done...">
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1">
+            <label>Priority</label>
+            <select id="taskPriority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1">
+            <label>Repeat</label>
+            <select id="taskRepeat" onchange="onRepeatChange()">
+              <option value="none">One-off</option>
+              <option value="daily">Every day</option>
+              <option value="hourly">Every hour</option>
+              <option value="interval">Every N hours</option>
+              <option value="ntimes">N times per day</option>
+              <option value="custom">Custom times</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- One-off / daily: show time picker -->
+        <div id="rowTime" class="form-row">
+          <div class="field" style="flex:1">
+            <label>Reminder time</label>
+            <input type="time" id="taskTime">
+          </div>
+          <div class="field" style="flex:1"><!-- spacer --></div>
+        </div>
+
+        <!-- Hourly / interval: interval input -->
+        <div id="rowInterval" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>Every</label>
+              <select id="taskInterval" style="width:100%">
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60" selected>1 hour</option>
+                <option value="90">1.5 hours</option>
+                <option value="120">2 hours</option>
+                <option value="180">3 hours</option>
+                <option value="240">4 hours</option>
+                <option value="360">6 hours</option>
+                <option value="480">8 hours</option>
+                <option value="720">12 hours</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1"><!-- spacer --></div>
+          </div>
+        </div>
+
+        <!-- N times per day: count input -->
+        <div id="rowNtimes" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>Times per day</label>
+              <input type="number" id="taskNtimes" min="1" max="10" value="3" style="width:100%">
+            </div>
+            <div class="field" style="flex:1"><!-- spacer --></div>
+          </div>
+        </div>
+
+        <!-- Custom times: dynamic list -->
+        <div id="rowCustom" style="display:none">
+          <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:4px">Reminder times</div>
+          <div id="customTimesList"></div>
+          <button type="button" class="btn" onclick="addCustomTime()" style="margin-top:4px;font-size:0.8rem;padding:4px 10px">+ Add time</button>
+        </div>
+
+        <!-- Active window (hourly / interval / ntimes) -->
+        <div id="rowWindow" style="display:none">
+          <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:4px">Active window (reminders only within these hours)</div>
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>From</label>
+              <input type="time" id="taskActiveStart" value="08:00">
+            </div>
+            <div class="field" style="flex:1">
+              <label>Until</label>
+              <input type="time" id="taskActiveEnd" value="22:00">
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Notes (optional)</label>
+          <input type="text" id="taskDesc" placeholder="Additional context...">
+        </div>
+        <div class="form-row">
+          <button class="btn btn-primary" style="flex:1" onclick="addTask()">Add Task</button>
+          <button class="btn" onclick="toggleAddForm()">Cancel</button>
+        </div>
+      </div>
+
+      <button class="btn btn-full" style="margin-top:1rem" onclick="toggleAddForm()" id="addBtn">+ Add Task</button>
+    </div>
+    </div><!-- end hidden voice-command form wrapper -->
+
+    <!-- Debrief -->
+    <div class="card">
+      <div class="card-title">Evening Debrief</div>
+      <div class="debrief-area">
+        <div class="field">
+          <label>How did today go? Reflections, wins, challenges…</label>
+          <textarea id="debriefText" placeholder="Today I managed to... I struggled with... Tomorrow I want to..."></textarea>
+        </div>
+        <button class="btn btn-warm btn-full" onclick="sendDebrief()">
+          Send Debrief to WhatsApp
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-title">Send Now</div>
+      <div class="actions-grid">
+        <button class="btn" onclick="sendBriefing()">☀ Morning<br>Briefing</button>
+        <button class="btn" onclick="document.getElementById('debriefText').focus()">🌙 Evening<br>Debrief</button>
+      </div>
+      <div style="font-size:0.65rem;color:var(--muted);letter-spacing:0.08em;line-height:1.6">
+        Messages send automatically at your scheduled times. Use these buttons to send on demand.
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+        <div class="card-title" style="margin-bottom:0">Schedule</div>
+        <select id="calendarRange" onchange="loadCalendar()" style="font-size:0.75rem;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+          <option value="1:0">Today</option>
+          <option value="1:1">Tomorrow</option>
+          <option value="3:0">3 days</option>
+          <option value="7:0">1 week</option>
+          <option value="14:0">2 weeks</option>
+        </select>
+      </div>
+      <div id="calendarEvents">
+        <div class="empty-state">Loading calendar…</div>
+      </div>
+      <button class="btn btn-sm btn-full" style="margin-top:0.75rem" onclick="loadCalendar()">↻ Refresh</button>
+    </div>
+
+    <!-- Schedule Config -->
+    <div class="card">
+      <div class="card-title">Daily Schedule</div>
+      <div class="field">
+        <label>Morning briefing time</label>
+        <input type="time" id="morningTime" value="08:00">
+      </div>
+      <div class="field">
+        <label>Evening debrief time</label>
+        <input type="time" id="eveningTime" value="21:00">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="saveSchedule()">Save Schedule</button>
+    </div>
+
+  </div>
+</div>
+</div><!-- end page-dashboard -->
+
+<!-- Tasks Page -->
+<div id="page-tasks" class="page">
+  <div class="tasks-page">
+
+    <!-- Daily Habits -->
+    <div class="card">
+      <div class="card-title">Daily Habits</div>
+      <div class="task-list" id="habitsList">
+        <div class="empty-state">Loading…</div>
+      </div>
+      <div class="add-task-form" id="addHabitForm" style="display:none">
+        <div class="field">
+          <label>Habit name</label>
+          <input type="text" id="habitTitle" placeholder="e.g. Workout, Drink water…">
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1">
+            <label>Reminders</label>
+            <select id="habitRepeat" onchange="onHabitRepeatChange()" style="width:100%">
+              <option value="none">No reminder</option>
+              <option value="daily">Once a day</option>
+              <option value="ntimes">N times per day</option>
+              <option value="custom">Custom times</option>
+              <option value="interval">Every N minutes</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1" id="habitRowTime" style="display:none">
+            <label>Time</label>
+            <input type="time" id="habitTime">
+          </div>
+        </div>
+        <div id="habitRowNtimes" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>Times per day</label>
+              <input type="number" id="habitNtimes" min="1" max="10" value="3" style="width:100%">
+            </div>
+            <div class="field" style="flex:1"></div>
+          </div>
+        </div>
+        <div id="habitRowCustom" style="display:none">
+          <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:4px">Reminder times</div>
+          <div id="habitCustomTimesList"></div>
+          <button type="button" class="btn" onclick="addHabitCustomTime()" style="margin-top:4px;font-size:0.8rem;padding:4px 10px">+ Add time</button>
+        </div>
+        <div id="habitRowInterval" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>Every</label>
+              <select id="habitInterval" style="width:100%">
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60" selected>1 hour</option>
+                <option value="90">1.5 hours</option>
+                <option value="120">2 hours</option>
+                <option value="180">3 hours</option>
+                <option value="240">4 hours</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1"></div>
+          </div>
+        </div>
+        <div id="habitRowWindow" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1"><label>Window from</label><input type="time" id="habitActiveStart" value="08:00"></div>
+            <div class="field" style="flex:1"><label>Until</label><input type="time" id="habitActiveEnd" value="22:00"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Notes (optional)</label>
+          <input type="text" id="habitDesc" placeholder="Additional context…">
+        </div>
+        <div class="form-row">
+          <button class="btn btn-primary" style="flex:1" onclick="addHabit()">Add Habit</button>
+          <button class="btn" onclick="toggleHabitForm()">Cancel</button>
+        </div>
+      </div>
+      <button class="btn btn-full" style="margin-top:1rem" onclick="toggleHabitForm()" id="addHabitBtn">+ Add Habit</button>
+    </div>
+
+    <!-- Master List -->
+    <div class="card">
+      <div class="card-title">Master List</div>
+      <div class="tabs">
+        <button class="tab active" id="ml-tab-pending" onclick="switchMasterTab('pending')">Pending</button>
+        <button class="tab" id="ml-tab-done" onclick="switchMasterTab('done')">Done</button>
+      </div>
+      <div id="ml-pending">
+        <div class="task-list" id="masterList">
+          <div class="empty-state">Loading…</div>
+        </div>
+      </div>
+      <div id="ml-done" style="display:none">
+        <div class="task-list" id="masterListDone"></div>
+        <div class="empty-state" id="masterListDoneEmpty" style="display:none">Nothing completed yet</div>
+      </div>
+      <div class="add-task-form" id="addMasterForm" style="display:none">
+        <div class="field">
+          <label>Task title</label>
+          <input type="text" id="masterTitle" placeholder="What needs to get done…">
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1">
+            <label>Priority</label>
+            <select id="masterPriority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1">
+            <label>Deadline (optional)</label>
+            <input type="date" id="masterDeadline">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1">
+            <label>Reminder</label>
+            <select id="masterRepeat" onchange="onMasterRepeatChange()">
+              <option value="none">One-off</option>
+              <option value="daily">Every day</option>
+              <option value="interval">Every N minutes</option>
+              <option value="ntimes">N times per day</option>
+              <option value="custom">Custom times</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1" id="masterRowTime">
+            <label>Time</label>
+            <input type="time" id="masterTime">
+          </div>
+        </div>
+        <div id="masterRowInterval" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>Every</label>
+              <select id="masterInterval" style="width:100%">
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60" selected>1 hour</option>
+                <option value="90">1.5 hours</option>
+                <option value="120">2 hours</option>
+                <option value="180">3 hours</option>
+                <option value="240">4 hours</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1"></div>
+          </div>
+        </div>
+        <div id="masterRowNtimes" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>Times per day</label>
+              <input type="number" id="masterNtimes" min="1" max="10" value="3" style="width:100%">
+            </div>
+            <div class="field" style="flex:1"></div>
+          </div>
+        </div>
+        <div id="masterRowCustom" style="display:none">
+          <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:4px">Reminder times</div>
+          <div id="masterCustomTimesList"></div>
+          <button type="button" class="btn" onclick="addMasterCustomTime()" style="margin-top:4px;font-size:0.8rem;padding:4px 10px">+ Add time</button>
+        </div>
+        <div id="masterRowWindow" style="display:none">
+          <div class="form-row">
+            <div class="field" style="flex:1"><label>Window from</label><input type="time" id="masterActiveStart" value="08:00"></div>
+            <div class="field" style="flex:1"><label>Until</label><input type="time" id="masterActiveEnd" value="22:00"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Notes (optional)</label>
+          <input type="text" id="masterDesc" placeholder="Additional context…">
+        </div>
+        <div class="form-row">
+          <button class="btn btn-primary" style="flex:1" onclick="addMasterTask()">Add Task</button>
+          <button class="btn" onclick="toggleMasterForm()">Cancel</button>
+        </div>
+      </div>
+      <button class="btn btn-full" style="margin-top:1rem" onclick="toggleMasterForm()" id="addMasterBtn">+ Add Task</button>
+    </div>
+
+  </div>
+</div><!-- end page-tasks -->
+
+<!-- Stats Page -->
+<div id="page-stats" class="page">
+  <div style="max-width:900px;margin:0 auto;padding:2rem 1.5rem">
+
+    <!-- Period Selector -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <div class="card-title" style="margin-bottom:0">Productivity Stats</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="loadStats('7d')">Last 7 days</button>
+          <button class="btn btn-sm" onclick="loadStats('30d')">Last 30 days</button>
+          <button class="btn btn-sm" onclick="loadStats('90d')">Last Quarter</button>
+          <button class="btn btn-sm" onclick="loadStats('365d')">Last Year</button>
+        </div>
+      </div>
+      <div style="margin-top:0.75rem;font-size:0.65rem;color:var(--muted);letter-spacing:0.08em" id="statsPeriodLabel"></div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem" id="statsCards">
+      <div class="card" style="text-align:center;margin-bottom:0">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-weight:300;line-height:1" id="stat-total">—</div>
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-top:4px">Total Done</div>
+      </div>
+      <div class="card" style="text-align:center;margin-bottom:0">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-weight:300;line-height:1" id="stat-tasks">—</div>
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-top:4px">Tasks</div>
+      </div>
+      <div class="card" style="text-align:center;margin-bottom:0">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-weight:300;line-height:1" id="stat-habits">—</div>
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-top:4px">Habit Check-ins</div>
+      </div>
+      <div class="card" style="text-align:center;margin-bottom:0">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-weight:300;line-height:1" id="stat-days">—</div>
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-top:4px">Active Days</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+
+      <!-- Daily Breakdown -->
+      <div class="card">
+        <div class="card-title">Daily Breakdown</div>
+        <div id="statsByDate" style="max-height:360px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Top Items & AI Report -->
+      <div>
+        <div class="card">
+          <div class="card-title">Most Completed</div>
+          <div id="statsTopItems"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Ask Aria for a Report</div>
+          <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.05em;margin-bottom:1rem;line-height:1.7">
+            Get an AI-generated productivity summary with insights and suggestions for the selected period.
+          </div>
+          <button class="btn btn-warm btn-full" onclick="generateReport()" id="reportBtn">Generate Report</button>
+          <div id="reportOutput" style="margin-top:1rem;font-size:0.8rem;line-height:1.8;color:var(--ink);white-space:pre-wrap;display:none"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><!-- end page-stats -->
+
+<!-- Edit Task Modal -->
+<div class="settings-overlay" id="editOverlay" onclick="closeEditOnBg(event)">
+  <div class="settings-panel" style="max-width:420px">
+    <button class="close-btn" onclick="closeEdit()">✕</button>
+    <div class="settings-title">Edit Task</div>
+    <input type="hidden" id="edit-id">
+    <div class="field">
+      <label>Task title</label>
+      <input type="text" id="edit-title">
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:1">
+        <label>Priority</label>
+        <select id="edit-priority">
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1">
+        <label>Repeat</label>
+        <select id="edit-repeat" onchange="onEditRepeatChange()">
+          <option value="none">One-off</option>
+          <option value="daily">Every day</option>
+          <option value="hourly">Every hour</option>
+          <option value="interval">Every N hours</option>
+          <option value="ntimes">N times per day</option>
+          <option value="custom">Custom times</option>
+        </select>
+      </div>
+    </div>
+    <div id="edit-rowTime" class="form-row">
+      <div class="field" style="flex:1">
+        <label>Reminder time</label>
+        <input type="time" id="edit-time">
+      </div>
+      <div class="field" style="flex:1"></div>
+    </div>
+    <div id="edit-rowInterval" style="display:none">
+      <div class="form-row">
+        <div class="field" style="flex:1">
+          <label>Every</label>
+          <select id="edit-interval" style="width:100%">
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="90">1.5 hours</option>
+            <option value="120">2 hours</option>
+            <option value="180">3 hours</option>
+            <option value="240">4 hours</option>
+            <option value="360">6 hours</option>
+            <option value="480">8 hours</option>
+            <option value="720">12 hours</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1"></div>
+      </div>
+    </div>
+    <div id="edit-rowNtimes" style="display:none">
+      <div class="form-row">
+        <div class="field" style="flex:1">
+          <label>Times per day</label>
+          <input type="number" id="edit-ntimes" min="1" max="10" value="3" style="width:100%">
+        </div>
+        <div class="field" style="flex:1"></div>
+      </div>
+    </div>
+    <div id="edit-rowCustom" style="display:none">
+      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:4px">Reminder times</div>
+      <div id="edit-customTimesList"></div>
+      <button type="button" class="btn" onclick="addEditCustomTime()" style="margin-top:4px;font-size:0.8rem;padding:4px 10px">+ Add time</button>
+    </div>
+    <div id="edit-rowWindow" style="display:none">
+      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:4px">Active window</div>
+      <div class="form-row">
+        <div class="field" style="flex:1">
+          <label>From</label>
+          <input type="time" id="edit-activeStart" value="08:00">
+        </div>
+        <div class="field" style="flex:1">
+          <label>Until</label>
+          <input type="time" id="edit-activeEnd" value="22:00">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Notes (optional)</label>
+      <input type="text" id="edit-desc">
+    </div>
+    <div class="form-row" style="margin-top:0.5rem">
+      <button class="btn btn-primary" style="flex:1" onclick="saveEditTask()">Save changes</button>
+      <button class="btn" onclick="closeEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Overlay -->
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOnBg(event)">
+  <div class="settings-panel">
+    <button class="close-btn" onclick="closeSettings()">✕</button>
+    <div class="settings-title">Setup Aria</div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Your Info</div>
+      <div class="field">
+        <label>Your name</label>
+        <input type="text" id="cfg-userName" placeholder="e.g. Alex">
+      </div>
+      <div class="field">
+        <label>Your WhatsApp number (with country code)</label>
+        <input type="text" id="cfg-whatsappNumber" placeholder="+1234567890">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Anthropic AI</div>
+      <div class="field">
+        <label>Anthropic API Key</label>
+        <input type="password" id="cfg-anthropicKey" placeholder="sk-ant-...">
+      </div>
+      <div style="font-size:0.65rem;color:var(--muted);margin-top:-0.25rem;margin-bottom:0.5rem">
+        Get your key at console.anthropic.com
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Twilio WhatsApp</div>
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.75rem;line-height:1.7">
+        1. Create a free Twilio account at twilio.com<br>
+        2. Enable the WhatsApp Sandbox in Messaging > Try it Out<br>
+        3. Copy your Account SID, Auth Token, and sandbox number below
+      </div>
+      <div class="field">
+        <label>Account SID</label>
+        <input type="text" id="cfg-twilioAccountSid" placeholder="ACxxxxxxxx...">
+      </div>
+      <div class="field">
+        <label>Auth Token</label>
+        <input type="password" id="cfg-twilioAuthToken" placeholder="your auth token">
+      </div>
+      <div class="field">
+        <label>Twilio WhatsApp Number</label>
+        <input type="text" id="cfg-twilioFrom" placeholder="+14155238886">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Google Calendar</div>
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.75rem;line-height:1.7">
+        1. Go to console.cloud.google.com<br>
+        2. Create a project and enable the Calendar API<br>
+        3. Create OAuth credentials (Web App, redirect: http://localhost:3000/auth/google/callback)<br>
+        4. Enter credentials below, then connect
+      </div>
+      <div class="field">
+        <label>Google Client ID</label>
+        <input type="text" id="cfg-googleClientId" placeholder="xxxxx.apps.googleusercontent.com">
+      </div>
+      <div class="field">
+        <label>Google Client Secret</label>
+        <input type="password" id="cfg-googleClientSecret" placeholder="GOCSPX-...">
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+        <button class="btn btn-sm" onclick="saveSettingsAndConnect()">Save & Connect Google</button>
+      </div>
+      <div id="calendarStatus" style="font-size:0.65rem;margin-top:0.5rem;color:var(--success)"></div>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="saveSettings()">Save All Settings</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let recognition = null;
+  let isListening = false;
+  let config = {};
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+  async function init() {
+    await loadConfig();
+    await loadTasks();
+    await loadCalendar();
+    checkUrlParams();
+  }
+
+  async function loadConfig() {
+    try {
+      const res = await fetch('/api/config');
+      config = await res.json();
+      document.getElementById('morningTime').value = config.morningTime || '08:00';
+      document.getElementById('eveningTime').value = config.eveningTime || '21:00';
+      updateStatusDots();
+      if (!config.hasTwilio || !config.hasAnthropicKey) {
+        document.getElementById('setupNotice').classList.add('visible');
+      }
+    } catch (e) {
+      // Server might not be running — show demo mode
+      document.getElementById('setupNotice').classList.add('visible');
+      document.getElementById('setupNotice').textContent = '⚠ Cannot connect to server. Make sure the Node.js server is running (npm start).';
+    }
+  }
+
+  function updateStatusDots() {
+    document.getElementById('dot-twilio').className = 'status-dot' + (config.hasTwilio ? ' active' : '');
+    document.getElementById('dot-calendar').className = 'status-dot' + (config.hasCalendar ? ' active' : '');
+    document.getElementById('dot-ai').className = 'status-dot' + (config.hasAnthropicKey ? ' active' : '');
+  }
+
+  function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendar') === 'connected') {
+      toast('Google Calendar connected!');
+      window.history.replaceState({}, '', '/');
+      loadConfig();
+      loadCalendar();
+    }
+  }
+
+  // ── TASKS ─────────────────────────────────────────────────────────────────
+  let tasks = [];
+
+  async function loadTasks() {
+    try {
+      const res = await fetch('/api/tasks');
+      tasks = await res.json();
+      renderHabits();
+      renderMasterList();
+      updateDashboardSummary();
+    } catch(e) {
+      tasks = [];
+    }
+  }
+
+  // kept for voice command compatibility
+  function renderTasks() {
+    renderHabits();
+    renderMasterList();
+    updateDashboardSummary();
+  }
+
+  function repeatLabel(task) {
+    if (!task.repeat || task.repeat === 'none') return task.reminderTime ? '⏰ ' + task.reminderTime : '';
+    if (task.repeat === 'daily') return '🔁 daily ' + (task.reminderTime || '');
+    if (task.repeat === 'hourly') return `🔁 every hour · ${task.activeStart||'08:00'}–${task.activeEnd||'22:00'}`;
+    if (task.repeat === 'interval') {
+      const mins = task.intervalMinutes || (task.intervalHours * 60) || 60;
+      const label = mins < 60 ? `${mins}min` : mins % 60 === 0 ? `${mins/60}h` : `${Math.floor(mins/60)}h${mins%60}min`;
+      return `🔁 every ${label} · ${task.activeStart||'08:00'}–${task.activeEnd||'22:00'}`;
+    }
+    if (task.repeat === 'ntimes') return `🔁 ${task.ntimesCount}× per day · ${task.activeStart||'08:00'}–${task.activeEnd||'22:00'}`;
+    if (task.repeat === 'custom' && task.reminderTimes?.length) return `⏰ ${task.reminderTimes.join(', ')}`;
+    return '';
+  }
+
+  function renderTaskList(containerId, list) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = list.map(task => `
+      <div class="task-item ${task.completed ? 'completed' : ''}" id="task-${task.id}">
+        <div class="task-check ${task.completed ? 'checked' : ''}" onclick="toggleTask('${task.id}')"></div>
+        <div class="task-info">
+          <div class="task-title">${escHtml(task.title)}</div>
+          <div class="task-meta">${repeatLabel(task)}${task.description ? ' · ' + escHtml(task.description) : ''}</div>
+        </div>
+        <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+        <button class="task-edit" onclick="editTask('${task.id}')">✎</button>
+        <button class="task-delete" onclick="deleteTask('${task.id}')">×</button>
+      </div>
+    `).join('');
+  }
+
+  async function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    await fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: !task.completed })
+    });
+    await loadTasks();
+  }
+
+  async function deleteTask(id) {
+    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    await loadTasks();
+  }
+
+  function addCustomTime(value = '') {
+    const list = document.getElementById('customTimesList');
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+    div.innerHTML = `<input type="time" value="${value}" style="flex:1">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.3rem;line-height:1">×</button>`;
+    list.appendChild(div);
+  }
+
+  function getCustomTimes() {
+    return Array.from(document.querySelectorAll('#customTimesList input[type=time]'))
+      .map(i => i.value).filter(v => v);
+  }
+
+  function onRepeatChange() {
+    const repeat = document.getElementById('taskRepeat').value;
+    const isRecurring = repeat === 'hourly' || repeat === 'interval';
+    const isNtimes    = repeat === 'ntimes';
+    const isCustom    = repeat === 'custom';
+    document.getElementById('rowTime').style.display     = (isRecurring || isNtimes || isCustom) ? 'none' : 'flex';
+    document.getElementById('rowInterval').style.display = repeat === 'interval' ? 'block' : 'none';
+    document.getElementById('rowNtimes').style.display   = isNtimes ? 'block' : 'none';
+    document.getElementById('rowCustom').style.display   = isCustom ? 'block' : 'none';
+    document.getElementById('rowWindow').style.display   = (isRecurring || isNtimes) ? 'block' : 'none';
+    if (isCustom && document.getElementById('customTimesList').children.length === 0) addCustomTime();
+  }
+
+  async function addTask() {
+    const title = document.getElementById('taskTitle').value.trim();
+    if (!title) { toast('Please enter a task title'); return; }
+    const repeat = document.getElementById('taskRepeat').value;
+    const isRecurring = repeat === 'hourly' || repeat === 'interval';
+    const isNtimes    = repeat === 'ntimes';
+    const isCustom    = repeat === 'custom';
+
+    await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        description: document.getElementById('taskDesc').value,
+        priority: document.getElementById('taskPriority').value,
+        repeat,
+        reminderTime: (isRecurring || isNtimes || isCustom) ? null : (document.getElementById('taskTime').value || null),
+        reminderTimes: isCustom ? getCustomTimes() : [],
+        intervalMinutes: repeat === 'interval' ? parseInt(document.getElementById('taskInterval').value) : null,
+        ntimesCount: isNtimes ? parseInt(document.getElementById('taskNtimes').value) : null,
+        activeStart: (isRecurring || isNtimes) ? document.getElementById('taskActiveStart').value : '08:00',
+        activeEnd:   (isRecurring || isNtimes) ? document.getElementById('taskActiveEnd').value   : '22:00',
+      })
+    });
+
+    // Reset form
+    ['taskTitle','taskDesc','taskTime'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('taskRepeat').value = 'none';
+    document.getElementById('taskInterval').value = '60';
+    document.getElementById('taskNtimes').value = '3';
+    document.getElementById('taskActiveStart').value = '08:00';
+    document.getElementById('taskActiveEnd').value = '22:00';
+    document.getElementById('customTimesList').innerHTML = '';
+    onRepeatChange();
+    toggleAddForm();
+    await loadTasks();
+    toast('Task added');
+  }
+
+  function toggleAddForm() {
+    const form = document.getElementById('addTaskForm');
+    const btn = document.getElementById('addBtn');
+    const visible = form.style.display !== 'none';
+    form.style.display = visible ? 'none' : 'block';
+    btn.style.display = visible ? 'block' : 'none';
+    if (!visible) document.getElementById('taskTitle').focus();
+  }
+
+  // ── EDIT TASK ─────────────────────────────────────────────────────────────
+  function editTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    document.getElementById('edit-id').value = task.id;
+    document.getElementById('edit-title').value = task.title;
+    document.getElementById('edit-desc').value = task.description || '';
+    document.getElementById('edit-priority').value = task.priority || 'medium';
+    document.getElementById('edit-repeat').value = task.repeat || 'none';
+    document.getElementById('edit-time').value = task.reminderTime || '';
+    document.getElementById('edit-interval').value = task.intervalMinutes || (task.intervalHours * 60) || 60;
+    document.getElementById('edit-ntimes').value = task.ntimesCount || 3;
+    document.getElementById('edit-activeStart').value = task.activeStart || '08:00';
+    document.getElementById('edit-activeEnd').value = task.activeEnd || '22:00';
+    // populate custom times
+    const list = document.getElementById('edit-customTimesList');
+    list.innerHTML = '';
+    (task.reminderTimes || []).forEach(t => addEditCustomTime(t));
+    onEditRepeatChange();
+    document.getElementById('editOverlay').classList.add('open');
+  }
+
+  function closeEdit() { document.getElementById('editOverlay').classList.remove('open'); }
+  function closeEditOnBg(e) { if (e.target.id === 'editOverlay') closeEdit(); }
+
+  function addEditCustomTime(value = '') {
+    const list = document.getElementById('edit-customTimesList');
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+    div.innerHTML = `<input type="time" value="${value}" style="flex:1">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.3rem;line-height:1">×</button>`;
+    list.appendChild(div);
+  }
+
+  function getEditCustomTimes() {
+    return Array.from(document.querySelectorAll('#edit-customTimesList input[type=time]'))
+      .map(i => i.value).filter(v => v);
+  }
+
+  function onEditRepeatChange() {
+    const repeat = document.getElementById('edit-repeat').value;
+    const isRecurring = repeat === 'hourly' || repeat === 'interval';
+    const isNtimes    = repeat === 'ntimes';
+    const isCustom    = repeat === 'custom';
+    document.getElementById('edit-rowTime').style.display     = (isRecurring || isNtimes || isCustom) ? 'none' : 'flex';
+    document.getElementById('edit-rowInterval').style.display = repeat === 'interval' ? 'block' : 'none';
+    document.getElementById('edit-rowNtimes').style.display   = isNtimes ? 'block' : 'none';
+    document.getElementById('edit-rowCustom').style.display   = isCustom ? 'block' : 'none';
+    document.getElementById('edit-rowWindow').style.display   = (isRecurring || isNtimes) ? 'block' : 'none';
+    if (isCustom && document.getElementById('edit-customTimesList').children.length === 0) addEditCustomTime();
+  }
+
+  async function saveEditTask() {
+    const id = document.getElementById('edit-id').value;
+    const repeat = document.getElementById('edit-repeat').value;
+    const isRecurring = repeat === 'hourly' || repeat === 'interval';
+    const isNtimes    = repeat === 'ntimes';
+    const isCustom    = repeat === 'custom';
+    await fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title:        document.getElementById('edit-title').value.trim(),
+        description:  document.getElementById('edit-desc').value,
+        priority:     document.getElementById('edit-priority').value,
+        repeat,
+        reminderTime: (isRecurring || isNtimes || isCustom) ? null : (document.getElementById('edit-time').value || null),
+        reminderTimes: isCustom ? getEditCustomTimes() : [],
+        intervalMinutes: repeat === 'interval' ? parseInt(document.getElementById('edit-interval').value) : null,
+        ntimesCount:   isNtimes ? parseInt(document.getElementById('edit-ntimes').value) : null,
+        activeStart:   (isRecurring || isNtimes) ? document.getElementById('edit-activeStart').value : '08:00',
+        activeEnd:     (isRecurring || isNtimes) ? document.getElementById('edit-activeEnd').value   : '22:00',
+      })
+    });
+    closeEdit();
+    await loadTasks();
+    toast('Saved');
+  }
+
+  // ── CALENDAR ──────────────────────────────────────────────────────────────
+  async function loadCalendar() {
+    const el = document.getElementById('calendarEvents');
+    const raw = document.getElementById('calendarRange')?.value || '1:0';
+    const [days, from] = raw.split(':');
+    try {
+      const res = await fetch(`/api/calendar?days=${days}&from=${from || 0}`);
+      const events = await res.json();
+      if (events.error || events.length === 0) {
+        el.innerHTML = '<div class="empty-state">No events found<br>— or calendar not connected</div>';
+        return;
+      }
+
+      // Group by day
+      const groups = {};
+      events.forEach(e => {
+        const dateKey = e.start ? e.start.substring(0, 10) : 'unknown';
+        if (!groups[dateKey]) groups[dateKey] = [];
+        groups[dateKey].push(e);
+      });
+
+      const today = new Date().toISOString().substring(0, 10);
+      el.innerHTML = Object.entries(groups).map(([date, dayEvents]) => {
+        const d = new Date(date + 'T00:00:00');
+        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().substring(0, 10);
+        const label = date === today ? 'Today' : date === tomorrowStr ? 'Tomorrow' : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        const eventsHtml = dayEvents.map(e => {
+          const isAllDay = !e.start?.includes('T');
+          const time = isAllDay ? 'All day' : new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return `<div class="calendar-event">
+            <div class="event-time">${time}</div>
+            <div class="event-title">${escHtml(e.title)}</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:0.75rem">
+          <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:4px">${label}</div>
+          ${eventsHtml}
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div class="empty-state">Connect calendar in Setup</div>';
+    }
+  }
+
+  // ── ACTIONS ───────────────────────────────────────────────────────────────
+  async function sendBriefing() {
+    toast('Sending morning briefing…');
+    try {
+      const res = await fetch('/api/send-briefing', { method: 'POST' });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      toast('✓ Morning briefing sent to WhatsApp!');
+    } catch (e) {
+      toast('Error: ' + e.message);
+    }
+  }
+
+  async function sendDebrief() {
+    const reflection = document.getElementById('debriefText').value;
+    toast('Sending debrief…');
+    try {
+      const res = await fetch('/api/send-debrief', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reflection })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      toast('✓ Evening debrief sent to WhatsApp!');
+      document.getElementById('debriefText').value = '';
+    } catch (e) {
+      toast('Error: ' + e.message);
+    }
+  }
+
+  async function saveSchedule() {
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        morningTime: document.getElementById('morningTime').value,
+        eveningTime: document.getElementById('eveningTime').value
+      })
+    });
+    toast('Schedule saved');
+  }
+
+  // ── VOICE ─────────────────────────────────────────────────────────────────
+  function setupVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('micBtn').classList.add('listening');
+      document.getElementById('voiceHint').textContent = 'Listening…';
+    };
+
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+      const box = document.getElementById('transcriptBox');
+      box.textContent = transcript;
+      box.classList.add('visible');
+    };
+
+    recognition.onend = async () => {
+      isListening = false;
+      document.getElementById('micBtn').classList.remove('listening');
+      document.getElementById('voiceHint').textContent = 'Processing…';
+      const transcript = document.getElementById('transcriptBox').textContent;
+      if (transcript) await processVoiceCommand(transcript);
+      document.getElementById('voiceHint').textContent = 'Tap to speak to Aria';
+    };
+
+    recognition.onerror = () => {
+      isListening = false;
+      document.getElementById('micBtn').classList.remove('listening');
+      document.getElementById('voiceHint').textContent = 'Tap to speak to Aria';
+    };
+  }
+
+  function toggleVoice() {
+    if (!recognition) {
+      setupVoice();
+      if (!recognition) { toast('Voice not supported in this browser. Try Chrome.'); return; }
+    }
+    if (isListening) {
+      recognition.stop();
+    } else {
+      document.getElementById('transcriptBox').textContent = '';
+      document.getElementById('transcriptBox').classList.remove('visible');
+      recognition.start();
+    }
+  }
+
+  async function processVoiceCommand(transcript) {
+    try {
+      const res = await fetch('/api/voice-command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript })
+      });
+      const action = await res.json();
+      await handleAction(action);
+    } catch (e) {
+      toast('Could not process command');
+    }
+  }
+
+  async function handleAction(action) {
+    switch (action.action) {
+      case 'add_task':
+        await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: action.title,
+            description: action.description || '',
+            priority: action.priority || 'medium',
+            repeat: action.repeat || 'none',
+            reminderTime: action.reminderTime || null,
+            reminderTimes: action.reminderTimes || [],
+            intervalMinutes: action.intervalHours ? action.intervalHours * 60 : (action.intervalMinutes || null),
+            ntimesCount: action.ntimesCount || null,
+            activeStart: action.activeStart || '08:00',
+            activeEnd: action.activeEnd || '22:00',
+          })
+        });
+        await loadTasks();
+        toast(`✓ Added: "${action.title}"`);
+        break;
+      case 'modify_task': {
+        const target = tasks.find(t => t.title.toLowerCase().includes(action.taskTitle?.toLowerCase()));
+        if (target) {
+          const u = action.updates || {};
+          const patchBody = {};
+          if (u.title !== undefined)        patchBody.title = u.title;
+          if (u.description !== undefined)  patchBody.description = u.description;
+          if (u.priority !== undefined)     patchBody.priority = u.priority;
+          if (u.repeat !== undefined)       patchBody.repeat = u.repeat;
+          if (u.reminderTime !== undefined) patchBody.reminderTime = u.reminderTime;
+          if (u.reminderTimes !== undefined) patchBody.reminderTimes = u.reminderTimes;
+          if (u.ntimesCount !== undefined)  patchBody.ntimesCount = u.ntimesCount;
+          if (u.activeStart !== undefined)  patchBody.activeStart = u.activeStart;
+          if (u.activeEnd !== undefined)    patchBody.activeEnd = u.activeEnd;
+          if (u.intervalHours !== undefined) patchBody.intervalMinutes = u.intervalHours * 60;
+          else if (u.intervalMinutes !== undefined) patchBody.intervalMinutes = u.intervalMinutes;
+          await fetch(`/api/tasks/${target.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patchBody)
+          });
+          await loadTasks();
+          toast(`✓ Updated: "${target.title}"`);
+        } else { toast('Task not found'); }
+        break;
+      }
+      case 'complete_task': {
+        const task = tasks.find(t => t.title.toLowerCase().includes(action.taskTitle?.toLowerCase()));
+        if (task) {
+          await fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completed: true })
+          });
+          await loadTasks();
+          toast(`✓ Completed: "${task.title}"`);
+        } else { toast('Task not found'); }
+        break;
+      }
+      case 'send_briefing':
+        await sendBriefing();
+        break;
+      case 'send_debrief':
+        document.getElementById('debriefText').value = action.reflection || '';
+        await sendDebrief();
+        break;
+      case 'list_tasks':
+        const pending = tasks.filter(t => !t.completed);
+        toast(`You have ${pending.length} pending tasks`);
+        break;
+      default:
+        if (action.message) toast(action.message);
+    }
+  }
+
+  // ── SETTINGS ─────────────────────────────────────────────────────────────
+  async function openSettings() {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    document.getElementById('cfg-whatsappNumber').value = cfg.whatsappNumber || '';
+    document.getElementById('cfg-userName').value = cfg.userName || '';
+    if (cfg.hasCalendar) document.getElementById('calendarStatus').textContent = '✓ Calendar connected';
+    document.getElementById('settingsOverlay').classList.add('open');
+  }
+
+  function closeSettings() {
+    document.getElementById('settingsOverlay').classList.remove('open');
+  }
+
+  function closeSettingsOnBg(e) {
+    if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+  }
+
+  async function saveSettings() {
+    const body = {
+      userName: document.getElementById('cfg-userName').value,
+      whatsappNumber: document.getElementById('cfg-whatsappNumber').value,
+      anthropicKey: document.getElementById('cfg-anthropicKey').value || undefined,
+      twilioAccountSid: document.getElementById('cfg-twilioAccountSid').value || undefined,
+      twilioAuthToken: document.getElementById('cfg-twilioAuthToken').value || undefined,
+      twilioFrom: document.getElementById('cfg-twilioFrom').value || undefined,
+      googleClientId: document.getElementById('cfg-googleClientId').value || undefined,
+      googleClientSecret: document.getElementById('cfg-googleClientSecret').value || undefined,
+    };
+    // Remove undefined
+    Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    await loadConfig();
+    closeSettings();
+    toast('✓ Settings saved');
+  }
+
+  async function saveSettingsAndConnect() {
+    await saveSettings();
+    window.location.href = '/auth/google';
+  }
+
+  // ── PAGE NAVIGATION ───────────────────────────────────────────────────────
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name === 'tasks') loadTasks();
+    if (name === 'stats') loadStats();
+  }
+
+  // ── HABITS ────────────────────────────────────────────────────────────────
+  function renderHabits() {
+    const habits = tasks.filter(t => t.type === 'habit');
+    const el = document.getElementById('habitsList');
+    if (!el) return;
+    const today = new Date().toISOString().substring(0, 10);
+    if (habits.length === 0) {
+      el.innerHTML = '<div class="empty-state">No habits yet — add your first one below</div>';
+      return;
+    }
+    el.innerHTML = habits.map(task => {
+      const doneToday = (task.completedDates || []).includes(today);
+      return `<div class="task-item ${doneToday ? 'done-today' : ''}">
+        <div class="habit-check ${doneToday ? 'done-today' : ''}" onclick="toggleHabitToday('${task.id}')"></div>
+        <div class="task-info">
+          <div class="task-title">${escHtml(task.title)}</div>
+          <div class="task-meta">${repeatLabel(task) || 'no reminder'}${task.description ? ' · ' + escHtml(task.description) : ''}</div>
+        </div>
+        <button class="task-edit" onclick="editTask('${task.id}')">✎</button>
+        <button class="task-delete" onclick="deleteTask('${task.id}')">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  async function toggleHabitToday(id) {
+    await fetch(`/api/tasks/${id}/toggle-today`, { method: 'POST' });
+    await loadTasks();
+  }
+
+  function toggleHabitForm() {
+    const form = document.getElementById('addHabitForm');
+    const btn = document.getElementById('addHabitBtn');
+    const visible = form.style.display !== 'none';
+    form.style.display = visible ? 'none' : 'block';
+    btn.style.display = visible ? 'block' : 'none';
+    if (!visible) document.getElementById('habitTitle').focus();
+  }
+
+  function onHabitRepeatChange() {
+    const repeat = document.getElementById('habitRepeat').value;
+    document.getElementById('habitRowTime').style.display    = repeat === 'daily' ? 'flex' : 'none';
+    document.getElementById('habitRowNtimes').style.display  = repeat === 'ntimes' ? 'block' : 'none';
+    document.getElementById('habitRowCustom').style.display  = repeat === 'custom' ? 'block' : 'none';
+    document.getElementById('habitRowInterval').style.display = repeat === 'interval' ? 'block' : 'none';
+    document.getElementById('habitRowWindow').style.display  = (repeat === 'ntimes' || repeat === 'interval') ? 'block' : 'none';
+    if (repeat === 'custom' && document.getElementById('habitCustomTimesList').children.length === 0) addHabitCustomTime();
+  }
+
+  function addHabitCustomTime(value = '') {
+    const list = document.getElementById('habitCustomTimesList');
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+    div.innerHTML = `<input type="time" value="${value}" style="flex:1">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.3rem;line-height:1">×</button>`;
+    list.appendChild(div);
+  }
+
+  async function addHabit() {
+    const title = document.getElementById('habitTitle').value.trim();
+    if (!title) { toast('Please enter a habit name'); return; }
+    const repeat = document.getElementById('habitRepeat').value;
+    const isNtimes = repeat === 'ntimes';
+    const isCustom = repeat === 'custom';
+    const isInterval = repeat === 'interval';
+    const customTimes = isCustom
+      ? Array.from(document.querySelectorAll('#habitCustomTimesList input[type=time]')).map(i => i.value).filter(v => v)
+      : [];
+    await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'habit',
+        title,
+        description: document.getElementById('habitDesc').value,
+        priority: 'medium',
+        repeat,
+        reminderTime: repeat === 'daily' ? (document.getElementById('habitTime').value || null) : null,
+        reminderTimes: customTimes,
+        ntimesCount: isNtimes ? parseInt(document.getElementById('habitNtimes').value) : null,
+        intervalMinutes: isInterval ? parseInt(document.getElementById('habitInterval').value) : null,
+        activeStart: (isNtimes || isInterval) ? document.getElementById('habitActiveStart').value : '08:00',
+        activeEnd:   (isNtimes || isInterval) ? document.getElementById('habitActiveEnd').value   : '22:00',
+      })
+    });
+    ['habitTitle','habitDesc','habitTime'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('habitRepeat').value = 'none';
+    document.getElementById('habitCustomTimesList').innerHTML = '';
+    onHabitRepeatChange();
+    toggleHabitForm();
+    await loadTasks();
+    toast('Habit added');
+  }
+
+  // ── MASTER LIST ───────────────────────────────────────────────────────────
+  function getDeadlineBadge(deadline) {
+    if (!deadline) return '';
+    const today = new Date().toISOString().substring(0, 10);
+    const daysUntil = Math.ceil((new Date(deadline) - new Date(today)) / 86400000);
+    if (daysUntil < 0) return `<span class="deadline-badge deadline-overdue">⚠ ${Math.abs(daysUntil)}d overdue</span>`;
+    if (daysUntil === 0) return `<span class="deadline-badge deadline-soon">due today</span>`;
+    if (daysUntil <= 3) return `<span class="deadline-badge deadline-soon">in ${daysUntil}d</span>`;
+    return `<span class="deadline-badge deadline-ok">${new Date(deadline + 'T00:00:00').toLocaleDateString('en-GB', {month:'short', day:'numeric'})}</span>`;
+  }
+
+  function renderMasterList() {
+    const pending = tasks.filter(t => t.type !== 'habit' && !t.completed)
+      .sort((a, b) => {
+        if (!a.deadline && !b.deadline) return 0;
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return a.deadline.localeCompare(b.deadline);
+      });
+    const done = tasks.filter(t => t.type !== 'habit' && t.completed);
+
+    const el = document.getElementById('masterList');
+    const elDone = document.getElementById('masterListDone');
+    if (!el) return;
+
+    el.innerHTML = pending.length === 0
+      ? '<div class="empty-state">No pending tasks — great work!</div>'
+      : pending.map(task => `
+        <div class="task-item" id="task-${task.id}">
+          <div class="task-check" onclick="toggleTask('${task.id}')"></div>
+          <div class="task-info">
+            <div class="task-title">${escHtml(task.title)}</div>
+            <div class="task-meta">${repeatLabel(task)}${task.description ? ' · ' + escHtml(task.description) : ''}</div>
+          </div>
+          ${getDeadlineBadge(task.deadline)}
+          <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+          <button class="task-edit" onclick="editTask('${task.id}')">✎</button>
+          <button class="task-delete" onclick="deleteTask('${task.id}')">×</button>
+        </div>`).join('');
+
+    if (elDone) {
+      elDone.innerHTML = done.map(task => `
+        <div class="task-item completed">
+          <div class="task-check checked"></div>
+          <div class="task-info">
+            <div class="task-title">${escHtml(task.title)}</div>
+          </div>
+          <button class="task-delete" onclick="deleteTask('${task.id}')">×</button>
+        </div>`).join('');
+      document.getElementById('masterListDoneEmpty').style.display = done.length === 0 ? 'block' : 'none';
+    }
+  }
+
+  function switchMasterTab(tab) {
+    document.getElementById('ml-tab-pending').classList.toggle('active', tab === 'pending');
+    document.getElementById('ml-tab-done').classList.toggle('active', tab === 'done');
+    document.getElementById('ml-pending').style.display = tab === 'pending' ? 'block' : 'none';
+    document.getElementById('ml-done').style.display = tab === 'done' ? 'block' : 'none';
+  }
+
+  function toggleMasterForm() {
+    const form = document.getElementById('addMasterForm');
+    const btn = document.getElementById('addMasterBtn');
+    const visible = form.style.display !== 'none';
+    form.style.display = visible ? 'none' : 'block';
+    btn.style.display = visible ? 'block' : 'none';
+    if (!visible) document.getElementById('masterTitle').focus();
+  }
+
+  function onMasterRepeatChange() {
+    const repeat = document.getElementById('masterRepeat').value;
+    const isRecurring = repeat === 'interval';
+    const isNtimes = repeat === 'ntimes';
+    const isCustom = repeat === 'custom';
+    document.getElementById('masterRowTime').style.display = (isRecurring || isNtimes || isCustom) ? 'none' : 'flex';
+    document.getElementById('masterRowInterval').style.display = isRecurring ? 'block' : 'none';
+    document.getElementById('masterRowNtimes').style.display = isNtimes ? 'block' : 'none';
+    document.getElementById('masterRowCustom').style.display = isCustom ? 'block' : 'none';
+    document.getElementById('masterRowWindow').style.display = (isRecurring || isNtimes) ? 'block' : 'none';
+    if (isCustom && document.getElementById('masterCustomTimesList').children.length === 0) addMasterCustomTime();
+  }
+
+  function addMasterCustomTime(value = '') {
+    const list = document.getElementById('masterCustomTimesList');
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+    div.innerHTML = `<input type="time" value="${value}" style="flex:1">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.3rem;line-height:1">×</button>`;
+    list.appendChild(div);
+  }
+
+  async function addMasterTask() {
+    const title = document.getElementById('masterTitle').value.trim();
+    if (!title) { toast('Please enter a task title'); return; }
+    const repeat = document.getElementById('masterRepeat').value;
+    const isRecurring = repeat === 'interval';
+    const isNtimes = repeat === 'ntimes';
+    const isCustom = repeat === 'custom';
+    const customTimes = isCustom
+      ? Array.from(document.querySelectorAll('#masterCustomTimesList input[type=time]')).map(i => i.value).filter(v => v)
+      : [];
+    await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'task',
+        title,
+        description: document.getElementById('masterDesc').value,
+        priority: document.getElementById('masterPriority').value,
+        deadline: document.getElementById('masterDeadline').value || null,
+        repeat,
+        reminderTime: (isRecurring || isNtimes || isCustom) ? null : (document.getElementById('masterTime').value || null),
+        reminderTimes: customTimes,
+        intervalMinutes: isRecurring ? parseInt(document.getElementById('masterInterval').value) : null,
+        ntimesCount: isNtimes ? parseInt(document.getElementById('masterNtimes').value) : null,
+        activeStart: (isRecurring || isNtimes) ? document.getElementById('masterActiveStart').value : '08:00',
+        activeEnd:   (isRecurring || isNtimes) ? document.getElementById('masterActiveEnd').value   : '22:00',
+      })
+    });
+    ['masterTitle','masterDesc','masterDeadline','masterTime'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('masterRepeat').value = 'none';
+    document.getElementById('masterCustomTimesList').innerHTML = '';
+    onMasterRepeatChange();
+    toggleMasterForm();
+    await loadTasks();
+    toast('Task added');
+  }
+
+  // ── DASHBOARD SUMMARY ─────────────────────────────────────────────────────
+  function updateDashboardSummary() {
+    const today = new Date().toISOString().substring(0, 10);
+    const habits = tasks.filter(t => t.type === 'habit');
+    const habitsDone = habits.filter(h => (h.completedDates || []).includes(today)).length;
+    const nonHabits = tasks.filter(t => t.type !== 'habit');
+    const completedTasks = nonHabits.filter(t => t.completed);
+    const pendingTasks = nonHabits.filter(t => !t.completed);
+    const total = nonHabits.length;
+
+    const summaryEl = document.getElementById('dashSummary');
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div class="summary-stat">
+          <div class="summary-stat-num" style="color:var(--warm)">${habitsDone}/${habits.length}</div>
+          <div class="summary-stat-label">Habits today</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-num" style="color:${completedTasks.length === total && total > 0 ? 'var(--success)' : 'var(--ink)'}">${completedTasks.length}/${total}</div>
+          <div class="summary-stat-label">Tasks done</div>
+        </div>`;
+    }
+
+    // Habits list
+    const habitsListEl = document.getElementById('dashHabitsList');
+    if (habitsListEl) {
+      habitsListEl.innerHTML = habits.length === 0
+        ? '<div class="empty-state" style="padding:0.75rem 0;font-size:0.8rem">No habits set up yet</div>'
+        : habits.map(h => {
+            const done = (h.completedDates || []).includes(today);
+            return `<div class="task-item ${done ? 'done-today' : ''}" style="padding:0.5rem 0.75rem">
+              <div class="habit-check ${done ? 'done-today' : ''}" onclick="toggleHabitToday('${h.id}')"></div>
+              <div class="task-info"><div class="task-title">${escHtml(h.title)}</div></div>
+            </div>`;
+          }).join('');
+    }
+
+    // Pending tasks list
+    const tasksListEl = document.getElementById('dashTasksList');
+    if (tasksListEl) {
+      const sorted = [...pendingTasks].sort((a, b) => {
+        if (!a.deadline && !b.deadline) return 0;
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return a.deadline.localeCompare(b.deadline);
+      });
+      tasksListEl.innerHTML = sorted.length === 0
+        ? '<div class="empty-state" style="padding:0.75rem 0;font-size:0.8rem">All tasks done!</div>'
+        : sorted.map(t => `
+            <div class="task-item" style="padding:0.5rem 0.75rem">
+              <div class="task-check" onclick="toggleTask('${t.id}')"></div>
+              <div class="task-info"><div class="task-title">${escHtml(t.title)}</div></div>
+              ${getDeadlineBadge(t.deadline)}
+            </div>`).join('');
+    }
+  }
+
+  // ── TABS ──────────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  // ── STATS ─────────────────────────────────────────────────────────────────
+  let currentStatsPeriod = '30d';
+  let currentStatsData = null;
+
+  function getDateRange(period) {
+    const to = new Date();
+    const from = new Date();
+    const days = parseInt(period);
+    from.setDate(from.getDate() - days + 1);
+    const fmt = d => d.toISOString().substring(0, 10);
+    const labels = { '7d': 'Last 7 days', '30d': 'Last 30 days', '90d': 'Last Quarter', '365d': 'Last Year' };
+    return { from: fmt(from), to: fmt(to), label: labels[period] || `Last ${days} days` };
+  }
+
+  async function loadStats(period) {
+    currentStatsPeriod = period || currentStatsPeriod;
+    const { from, to, label } = getDateRange(currentStatsPeriod);
+    document.getElementById('statsPeriodLabel').textContent = `${label} · ${from} → ${to}`;
+    try {
+      const res = await fetch(`/api/productivity?from=${from}&to=${to}`);
+      currentStatsData = await res.json();
+      renderStats(currentStatsData, from, to);
+    } catch (e) {
+      toast('Could not load stats');
+    }
+  }
+
+  function renderStats(data, from, to) {
+    document.getElementById('stat-total').textContent  = data.total;
+    document.getElementById('stat-tasks').textContent  = data.tasksDone;
+    document.getElementById('stat-habits').textContent = data.habitsDone;
+    const activeDays = Object.keys(data.byDate || {}).length;
+    document.getElementById('stat-days').textContent   = activeDays;
+
+    // Daily breakdown
+    const datesEl = document.getElementById('statsByDate');
+    const dates = Object.keys(data.byDate || {}).sort().reverse();
+    if (dates.length === 0) {
+      datesEl.innerHTML = '<div class="empty-state">No completions logged yet for this period.<br>Start completing tasks to build your history!</div>';
+    } else {
+      datesEl.innerHTML = dates.map(d => {
+        const day = data.byDate[d];
+        const label = new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        const total = day.tasks + day.habits;
+        return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--divider)">
+          <div style="font-size:0.65rem;color:var(--muted);white-space:nowrap;min-width:80px">${label}</div>
+          <div style="flex:1;background:var(--divider);height:6px;border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100, total * 10)}%;background:var(--warm);border-radius:3px;transition:width 0.4s"></div>
+          </div>
+          <div style="font-size:0.7rem;white-space:nowrap">
+            <span style="color:var(--ink)">${day.tasks} task${day.tasks !== 1 ? 's' : ''}</span>
+            ${day.habits > 0 ? `<span style="color:var(--muted)"> · ${day.habits} habit${day.habits !== 1 ? 's' : ''}</span>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // Top items
+    const topEl = document.getElementById('statsTopItems');
+    const freq = {};
+    (data.log || []).forEach(e => { freq[e.title] = (freq[e.title] || 0) + 1; });
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    if (sorted.length === 0) {
+      topEl.innerHTML = '<div class="empty-state">No data yet</div>';
+    } else {
+      const max = sorted[0][1];
+      topEl.innerHTML = sorted.map(([title, count]) => `
+        <div style="margin-bottom:0.6rem">
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:3px">
+            <span>${escHtml(title)}</span><span style="color:var(--warm)">${count}×</span>
+          </div>
+          <div style="background:var(--divider);height:4px;border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${Math.round((count/max)*100)}%;background:var(--warm);border-radius:2px"></div>
+          </div>
+        </div>`).join('');
+    }
+
+    // Reset report
+    document.getElementById('reportOutput').style.display = 'none';
+    document.getElementById('reportBtn').textContent = 'Generate Report';
+  }
+
+  async function generateReport() {
+    if (!currentStatsData) { toast('Load a period first'); return; }
+    const btn = document.getElementById('reportBtn');
+    btn.textContent = '⏳ Asking Aria…';
+    btn.disabled = true;
+    const { from, to, label } = getDateRange(currentStatsPeriod);
+    try {
+      const res = await fetch('/api/productivity/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to, period: label })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const out = document.getElementById('reportOutput');
+      out.textContent = data.report;
+      out.style.display = 'block';
+      btn.textContent = '↻ Regenerate Report';
+    } catch (e) {
+      toast('Could not generate report: ' + e.message);
+      btn.textContent = 'Generate Report';
+    }
+    btn.disabled = false;
+  }
+
+  // ── UTILS ─────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => el.classList.remove('show'), 3500);
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Start
+  init();
+</script>
+</body>
+</html>
