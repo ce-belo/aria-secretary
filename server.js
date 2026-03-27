@@ -277,13 +277,19 @@ function shouldRemindNow(task) {
   return task.reminderTime === currentTime;
 }
 
+function parseTime(timeStr) {
+  const [h, m] = (timeStr || '').split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  return { h, m };
+}
+
 function initSchedules() {
   const cfg = loadConfig();
 
   // Morning briefing
-  if (cfg.morningTime) {
-    const [h, m] = cfg.morningTime.split(':').map(Number);
-    cron.schedule(`${m} ${h} * * *`, async () => {
+  const morning = parseTime(cfg.morningTime);
+  if (morning) {
+    cron.schedule(`${morning.m} ${morning.h} * * *`, async () => {
       try {
         const briefing = await generateMorningBriefing();
         await sendWhatsApp(briefing);
@@ -293,9 +299,9 @@ function initSchedules() {
   }
 
   // Evening debrief trigger
-  if (cfg.eveningTime) {
-    const [h, m] = cfg.eveningTime.split(':').map(Number);
-    cron.schedule(`${m} ${h} * * *`, async () => {
+  const evening = parseTime(cfg.eveningTime);
+  if (evening) {
+    cron.schedule(`${evening.m} ${evening.h} * * *`, async () => {
       try {
         const msg = "🌙 Good evening! Time for your daily debrief. How did today go? What did you accomplish, and what's on your mind for tomorrow? Reply here or open the app to record your debrief.";
         await sendWhatsApp(msg);
