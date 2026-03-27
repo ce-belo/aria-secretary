@@ -14,6 +14,7 @@ app.use(express.static('public'));
 
 // Data directory — uses a mounted volume path on Railway, falls back to local for dev
 const DATA_DIR = process.env.DATA_DIR || __dirname;
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 
@@ -39,10 +40,6 @@ function loadConfig() {
   return cfg;
 }
 
-function saveConfig(config) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-}
-
 function loadData() {
   if (fs.existsSync(DATA_FILE)) {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
@@ -53,7 +50,21 @@ function loadData() {
 }
 
 function saveData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('saveData error:', err.message);
+  }
+}
+
+function saveConfig(config) {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  } catch (err) {
+    console.error('saveConfig error:', err.message);
+  }
 }
 
 // ── Twilio ──────────────────────────────────────────────────────────────────
